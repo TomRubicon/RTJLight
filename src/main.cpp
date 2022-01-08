@@ -8,13 +8,16 @@
 #define LEDS_PIN      5
 #define NUM_LEDS     98 
 
+static byte g_State       =    0;
+static byte g_StateMax    =    1;
+CRGB g_LEDs[NUM_LEDS]     =   {0};
+int g_Brightness          =  120;
+int g_PowerLimit          = 1200;
+int g_paletteIndex        =    0;
+
 #define TIMES_PER_SECOND(x) EVERY_N_MILLISECONDS(1000/x)
 
-static byte g_State = 0;
-static byte g_StateMax = 0;
-CRGB g_LEDs[NUM_LEDS] = {0};
-int g_Brightness = 120;
-int g_PowerLimit = 1200;
+#include "palettes.h"
 
 OneButton btn = OneButton {
   BUTTON_PIN,
@@ -47,6 +50,18 @@ void setup() {
 void loop() {
   while (true) {
     btn.tick();
+
+    if(g_State == 0) {
+      g_paletteIndex++;
+      fill_palette(g_LEDs, NUM_LEDS, g_paletteIndex, 255 / NUM_LEDS, yankeeBrave, 100, LINEARBLEND);
+    }
+    else if(g_State == 1) {
+      g_paletteIndex++;
+      fill_palette(g_LEDs, NUM_LEDS, g_paletteIndex, 255 / NUM_LEDS, greenPinkPurple, 100, LINEARBLEND);
+    }
+
+    FastLED.setBrightness(g_Brightness);
+    FastLED.delay(5);
 
   }
 }

@@ -38,8 +38,12 @@ async def send_json(websocket, path):
 
         #await websocket.send(json_bytes)
         await websocket.send(json_str)
+
         ts = datetime.datetime.now()
-        console.print(str(ts) + ">[bold green] Send packet [/bold green]")
+
+        #await websocket.send(str(ts))
+
+        #console.print(str(ts) + ">[bold green] Sent packet [/bold green]")
         #await websocket.send("Hello!")
         await asyncio.sleep(fps(default_fps))
 

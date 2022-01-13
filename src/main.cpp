@@ -26,7 +26,7 @@ int g_PowerLimit            =   1200;
 int g_paletteIndex          =      0;
 
 bool apMode = false;
-bool networkMode = false;
+bool networkMode = true;
 
 IPAddress local_IP(192, 168, 0, 184);
 IPAddress  gateway(192, 168, 0,   1);
@@ -138,77 +138,67 @@ void hexDump(const void *mem, uint32_t len, uint8_t cols = 16) {
   Serial.print("\n");
 }
 
-void handleJSON(uint8_t * payload) {
-      char* input;
-      size_t inputLength;
-      DynamicJsonDocument doc(8192);
-      DeserializationError error = deserializeJson(doc, input, inputLength);
-      deserializeJson(doc, payload);
-      Serial.println("Deserialized Json");
-      for (JsonPair item : doc.as<JsonObject>()) {
-        const char* item_key = item.key().c_str();
-        int value_r = item.value()["r"];
-        int value_g = item.value()["g"];
-        int value_b = item.value()["b"];
-
-        Serial.println(item_key);
-        Serial.println(value_r);
-        Serial.println(value_g);
-        Serial.println(value_b);
-
-        int id = atoi(item_key);
-        Serial.println(id);
-        g_LEDs[id] = CRGB(value_r, value_g, value_b);
-      }
-      doc.clear();
-      FastLED.show();
-}
-
 void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
-  switch(type){
-    case WStype_DISCONNECTED:
-      Serial.println("[WEBSOCKET] Disconnected!");
-      wsConnected = false;
-      break;
+  if (type == WStype_DISCONNECTED) {
+    Serial.println("[WEBSOCKET] Disconnected!");
+    wsConnected = false;
 
-    case WStype_CONNECTED:
-      Serial.printf("[WEBSOCKET] Connected to URL: %s\n", payload);
-      wsConnected = true;
+  } else if (type == WStype_CONNECTED) {
+    Serial.printf("[WEBSOCKET] Connected to URL: %s\n", payload);
+    wsConnected = true;
 
-      Serial.println("[WEBSOCKET] SENT: Connected");
-      webSocket.sendTXT("Connected");
-      break;
-      
-    case WStype_TEXT:
-      Serial.printf("[WEBSOCKET] Response: %s\n", payload); 
-      handleJSON(payload);
-      break;
+    Serial.println("[WEBSOCKET] SENT: Connected");
+    //webSocket.sendTXT("Connected");
 
-    case WStype_BIN:
-      Serial.printf("[WEBSOCKET] get binary length: %u\n", length);
-      hexDump(payload, length);
-      break;
+  } else if (type == WStype_TEXT) {
+    //Serial.printf("[WEBSOCKET] Response: %s\n", payload); 
+    char* input;
+    size_t inputLength;
+    //int counter;
+    DynamicJsonDocument doc(8192);
+    DeserializationError error = deserializeJson(doc, input, inputLength);
+    deserializeJson(doc, payload);
+    // Serial.print(millis());
+    // Serial.print("(");
+    // Serial.print(counter);
+    // Serial.print(")");
+    // Serial.println(": Deserialized Json");
+    for (JsonPair item : doc.as<JsonObject>()) {
+      const char* item_key = item.key().c_str();
+      int value_r = item.value()["r"];
+      int value_g = item.value()["g"];
+      int value_b = item.value()["b"];
 
-    case WStype_PING:
-      Serial.println("[WEBSOCKET] Ping!");
-      break;
+      // Serial.println(item_key);
+      // Serial.println(value_r);
+      // Serial.println(value_g);
+      // Serial.println(value_b);
 
-    case WStype_PONG:
-      Serial.println("[WEBSOCKET] Pong!");
-      break;
+      int id = atoi(item_key);
+      //Serial.println(id);
+      g_LEDs[id] = CRGB(value_r, value_g, value_b);
+    }
+    doc.clear();
+    FastLED.show();
 
-    case WStype_ERROR:
-    case WStype_FRAGMENT_TEXT_START:
-    case WStype_FRAGMENT_BIN_START:
-    case WStype_FRAGMENT:
-    case WStype_FRAGMENT_FIN:
-        break;
+  } else if (type == WStype_BIN) {
+    Serial.printf("[WEBSOCKET] get binary length: %u\n", length);
+    hexDump(payload, length);
+
+  } else if (type == WStype_PING) {
+    Serial.println("[WEBSOCKET] Ping!");
+
+  } else if (type == WStype_PONG) {
+    Serial.println("[WEBSOCKET] Pong!");
+
   }
+
 }
 
 void initWebSocket() {
   webSocket.begin("192.168.0.51", WS_PORT, "/");
   webSocket.onEvent(webSocketEvent);
+  webSocket.setReconnectInterval(5000);
   Serial.println("[WEBSOCKET] Websocket trying to connect");
 }
 
@@ -310,6 +300,11 @@ static void handleClick() {
   if (g_State > g_StateMax) g_State = 0;
 }
 
+static void handleDoubleClick()  {
+  Serial.println("Double click");
+  networkMode = (networkMode == true) ? false : true;
+}
+
 static void handleLongPress() {
   Serial.println("Button Long Press");
   WiFi.disconnect();
@@ -336,6 +331,7 @@ void setup() {
   FastLED.show();
 
   btn.attachClick(handleClick);
+  btn.attachDoubleClick(handleDoubleClick);
   btn.attachLongPressStart(handleLongPress);
 
   initWifi();
@@ -359,9 +355,8 @@ void loop() {
 
       FastLED.show();
 
-    } else if(networkMode) {  //  Network Mode  ////////////////////////////////
+    } else if(networkMode) {  //  Network(Websocket) Mode  ////////////////////////////////
       webSocket.loop();
-
       FastLED.show();
 
     } else {  // Standard Mode  ////////////////////////////////////////////////

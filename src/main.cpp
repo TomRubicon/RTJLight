@@ -26,7 +26,7 @@ int g_PowerLimit            =   1200;
 int g_paletteIndex          =      0;
 
 bool apMode = false;
-bool networkMode = true;
+bool networkMode = false;
 
 IPAddress local_IP(192, 168, 0, 184);
 IPAddress  gateway(192, 168, 0,   1);
@@ -152,33 +152,12 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
 
   } else if (type == WStype_TEXT) {
     //Serial.printf("[WEBSOCKET] Response: %s\n", payload); 
-    char* input;
-    size_t inputLength;
-    //int counter;
-    DynamicJsonDocument doc(8192);
-    DeserializationError error = deserializeJson(doc, input, inputLength);
-    deserializeJson(doc, payload);
-    // Serial.print(millis());
-    // Serial.print("(");
-    // Serial.print(counter);
-    // Serial.print(")");
-    // Serial.println(": Deserialized Json");
-    for (JsonPair item : doc.as<JsonObject>()) {
-      const char* item_key = item.key().c_str();
-      int value_r = item.value()["r"];
-      int value_g = item.value()["g"];
-      int value_b = item.value()["b"];
+    int data = atoi((char *)payload); 
+    int datamap = map(data, 0, 6000, 0 ,255);
+    //Serial.println(datamap);
+    // Serial.println("Sending data");
+    fill_palette(g_LEDs, NUM_LEDS, datamap, datamap / NUM_LEDS, yankeeBrave, 100, LINEARBLEND);
 
-      // Serial.println(item_key);
-      // Serial.println(value_r);
-      // Serial.println(value_g);
-      // Serial.println(value_b);
-
-      int id = atoi(item_key);
-      //Serial.println(id);
-      g_LEDs[id] = CRGB(value_r, value_g, value_b);
-    }
-    doc.clear();
     FastLED.show();
 
   } else if (type == WStype_BIN) {

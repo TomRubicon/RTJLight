@@ -2,11 +2,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
-#include <SPIFFS.h>
-#include <EEPROM.h>
 #define FASTLED_INTERNAL
 #include <FastLED.h>
-//#include <OneButton.h>
 #include <ESPAsyncWebServer.h>
 #include <WebSocketsClient.h>
 
@@ -17,8 +14,8 @@
 #define HTTP_PORT                 80 
 #define WS_PORT                 5678
 
-static int g_State         =      2;
-static int g_StateMax      =      2;
+static int g_State          =      2;
+static int g_StateMax       =      2;
 CRGB g_LEDs[NUM_LEDS]       =     {0};
 int g_Brightness            =    120;
 int g_BrightnessMax         =    120;
@@ -41,47 +38,10 @@ bool             wsConnected     = false;
 #define TIMES_PER_SECOND(x) EVERY_N_MILLISECONDS(1000/x)
 
 #include "palettes.h"
+#include "spiffsEEPROM.h"
 #include "button.h"
 
 Button button(BUTTON_PIN, g_State, g_StateMax, g_bNetworkMode);
-
-// SPIFFS & EEPROM  ////////////////////////////////////////////////////////////
-void initSPIFFS() {
-  if (!SPIFFS.begin()) {
-    Serial.println("Cannot mount SPIFFS volume...");
-  }
-}
-
-void wipeEEPROM() {
-  for(int i=0; i<400; i++) {
-    EEPROM.writeByte(i, 0);
-  }
-  EEPROM.commit();
-}
-
-bool writeToMemory(String ssid, String pass) {
-  char sBuff[30];
-  char pBuff[30];
-  ssid.toCharArray(sBuff, 30);
-  pass.toCharArray(pBuff, 30);
-  EEPROM.writeString(100, sBuff);
-  EEPROM.writeString(200, pBuff);
-  delay(100);
-  String s = EEPROM.readString(100);
-  String p = EEPROM.readString(200);
-
-  Serial.print("Stored SSID and Password: ");
-  Serial.print(s);
-  Serial.print(" / ");
-  Serial.print(p);
-  Serial.println("");
-
-  if(ssid == s && pass == p) {
-    return true;
-  } else {
-    return false;
-  }
-}
 
 // WEB SERVER  /////////////////////////////////////////////////////////////////
 void initWebServer(bool forAP = true) {
@@ -269,7 +229,6 @@ void initWifi() {
   initWebSocket();
 }
 
-
 // MAIN  ///////////////////////////////////////////////////////////////////////
 void setup() {
   pinMode(LEDS_PIN, OUTPUT);
@@ -296,14 +255,6 @@ void setup() {
 void loop() {
   while (true) {
     button.tick();
-    // EVERY_N_SECONDS(2) {
-    //   Serial.print("g_state: ");
-    //   Serial.print(g_State);
-    //   Serial.print("\n");
-    //   Serial.print("g_stateMax: ");
-    //   Serial.print(g_StateMax);
-    //   Serial.print("\n");
-    // }
 
     g_Brightness += 1;
     if(g_Brightness > g_BrightnessMax) g_Brightness = g_BrightnessMax;

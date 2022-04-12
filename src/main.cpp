@@ -6,7 +6,7 @@
 #include <EEPROM.h>
 #define FASTLED_INTERNAL
 #include <FastLED.h>
-#include <OneButton.h>
+//#include <OneButton.h>
 #include <ESPAsyncWebServer.h>
 #include <WebSocketsClient.h>
 
@@ -17,8 +17,8 @@
 #define HTTP_PORT                 80 
 #define WS_PORT                 5678
 
-static byte g_State         =      2;
-static byte g_StateMax      =      2;
+static int g_State         =      2;
+static int g_StateMax      =      2;
 CRGB g_LEDs[NUM_LEDS]       =     {0};
 int g_Brightness            =    120;
 int g_BrightnessMax         =    120;
@@ -26,7 +26,7 @@ int g_PowerLimit            =   1200;
 int g_paletteIndex          =      0;
 
 bool apMode = false;
-bool networkMode = false;
+bool g_bNetworkMode = false;
 
 IPAddress local_IP(192, 168, 0, 184);
 IPAddress  gateway(192, 168, 0,   1);
@@ -41,6 +41,9 @@ bool             wsConnected     = false;
 #define TIMES_PER_SECOND(x) EVERY_N_MILLISECONDS(1000/x)
 
 #include "palettes.h"
+#include "button.h"
+
+Button button(BUTTON_PIN, g_State, g_StateMax, g_bNetworkMode);
 
 // SPIFFS & EEPROM  ////////////////////////////////////////////////////////////
 void initSPIFFS() {
@@ -266,29 +269,6 @@ void initWifi() {
   initWebSocket();
 }
 
-// BUTTON  /////////////////////////////////////////////////////////////////////
-OneButton btn = OneButton {
-  BUTTON_PIN,
-  false,
-  true
-};
-
-static void handleClick() {
-  Serial.println("Button Single Click");
-  g_State += 1;
-  if (g_State > g_StateMax) g_State = 0;
-}
-
-static void handleDoubleClick()  {
-  Serial.println("Double click");
-  networkMode = (networkMode == true) ? false : true;
-}
-
-static void handleLongPress() {
-  Serial.println("Button Long Press");
-  WiFi.disconnect();
-  initAP();
-}
 
 // MAIN  ///////////////////////////////////////////////////////////////////////
 void setup() {
@@ -302,6 +282,7 @@ void setup() {
   initSPIFFS();
   EEPROM.begin(400);
 
+
   FastLED.addLeds<WS2812B, LEDS_PIN, GRB>(g_LEDs, NUM_LEDS);
   FastLED.setBrightness(g_Brightness);
   set_max_power_indicator_LED(LED_BUILTIN);
@@ -309,16 +290,20 @@ void setup() {
   g_LEDs[0] = CRGB::Yellow;
   FastLED.show();
 
-  btn.attachClick(handleClick);
-  btn.attachDoubleClick(handleDoubleClick);
-  btn.attachLongPressStart(handleLongPress);
-
   initWifi();
 }
 
 void loop() {
   while (true) {
-    btn.tick();
+    button.tick();
+    // EVERY_N_SECONDS(2) {
+    //   Serial.print("g_state: ");
+    //   Serial.print(g_State);
+    //   Serial.print("\n");
+    //   Serial.print("g_stateMax: ");
+    //   Serial.print(g_StateMax);
+    //   Serial.print("\n");
+    // }
 
     g_Brightness += 1;
     if(g_Brightness > g_BrightnessMax) g_Brightness = g_BrightnessMax;
@@ -334,7 +319,7 @@ void loop() {
 
       FastLED.show();
 
-    } else if(networkMode) {  //  Network(Websocket) Mode  ////////////////////////////////
+    } else if(g_bNetworkMode) {  //  Network(Websocket) Mode  ////////////////////////////////
       webSocket.loop();
       FastLED.show();
 
@@ -357,6 +342,7 @@ void loop() {
     g_paletteIndex++;
 
     FastLED.setBrightness(g_Brightness);
+
 
   }
 }

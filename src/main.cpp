@@ -10,8 +10,8 @@
 #define HTTP_PORT                 80 
 #define WS_PORT                 5678
 
-static int g_State          =      2;
-static int g_StateMax       =      2;
+int g_State          =      2;
+int g_StateMax       =      2;
 CRGB g_LEDs[NUM_LEDS]       =     {0};
 int g_Brightness            =    120;
 int g_BrightnessMax         =    120;
@@ -23,12 +23,10 @@ bool g_bNetworkMode = false;
 
 #include "palettes.h"
 #include "spiffsEEPROM.h"
-#include "button.h"
 #include "webserver.h"
 #include "websocket.h"
 #include "wifiinit.h"
-
-Button button(BUTTON_PIN, g_State, g_StateMax, g_bNetworkMode);
+#include "button.h"
 
 void setup() {
   pinMode(LEDS_PIN, OUTPUT);
@@ -38,9 +36,16 @@ void setup() {
   while (!Serial) { }
   Serial.println("ESP32 Starting up");
 
+  // Setup SPIFFS and EEPROM
   initSPIFFS();
   EEPROM.begin(400);
 
+  // Setup Button
+  btn.attachClick(handleClick);
+  btn.attachDoubleClick(handleDoubleClick);
+  btn.attachLongPressStart(handleLongPress);
+  
+  // Setup LED strip
   FastLED.addLeds<WS2812B, LEDS_PIN, GRB>(g_LEDs, NUM_LEDS);
   FastLED.setBrightness(g_Brightness);
   set_max_power_indicator_LED(LED_BUILTIN);
@@ -53,7 +58,7 @@ void setup() {
 
 void loop() {
   while (true) {
-    button.tick();
+    btn.tick();
 
     g_Brightness += 1;
     if(g_Brightness > g_BrightnessMax) g_Brightness = g_BrightnessMax;

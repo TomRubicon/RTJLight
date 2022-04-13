@@ -1,72 +1,29 @@
 #pragma once
 #include <OneButton.h>
-#include <Arduino.h>
 
-class Button {
-    private:
-      // Click Events
-      static void handleClick(void *ptr);
-      static void handleDoubleClick(void *ptr);
-      static void handleLongPress(void *ptr);
-
-      OneButton _btn;
-
-      // Reference variables
-      int &_state;          
-      int &_stateMax;
-      bool &_bNetworkMode;
-
-    public:
-      Button(int buttonPin, int &state, int &stateMax, bool &bNetworkMode):
-        _state(state),
-        _stateMax(stateMax),
-        _bNetworkMode(bNetworkMode) 
-      {
-        _btn = OneButton {
-          buttonPin, // Input Pin   
-          false,     // Button is active HIGH
-          false      // Disable internal pull-up resistor
-        };
-
-        // Attach click events
-        _btn.attachClick(handleClick, this);
-        _btn.attachDoubleClick(handleDoubleClick, this);
-        _btn.attachLongPressStart(handleLongPress, this);
-      }
-
-      ~Button();
-
-      void tick();
+OneButton btn = OneButton {
+  BUTTON_PIN,  // Input pin
+  false,       // Button is active HIGH
+  false        // Disable internal pull-up resistor
 };
 
 // Single Click rotates through preprogrammed animations
-void Button::handleClick(void *ptr) {
+static void handleClick() {
   Serial.println("Button Single Click");
-  Button *buttonPtr = (Button *)ptr;
-  buttonPtr->_state += 1;
-  if (buttonPtr->_state > buttonPtr->_stateMax) buttonPtr->_state = 0;
+  g_State += 1;
+  if (g_State > g_StateMax) g_State = 0;
 }
 
+
 // Double Clicking the button engages Network Mode
-void Button::handleDoubleClick(void *ptr) {
-  Serial.println("Button Double Click");
-  Button *buttonPtr = (Button *)ptr;
-  buttonPtr->_bNetworkMode = !buttonPtr->_bNetworkMode;
+static void handleDoubleClick()  {
+  Serial.println("Double click");
+  g_bNetworkMode = !g_bNetworkMode;
 }
 
 // Long pressing the button engages Access Point Mode
-void Button::handleLongPress(void *ptr) {
-  Serial.println("Button Long press");
-  Button *buttonPtr = (Button *)ptr;
-  // Reconnect these next two lines once they are also in a seperate file
-  //WiFi.disconnect();
-  //initAP();
-}
-
-void Button::tick() {
-  _btn.tick();
-}
-
-Button::~Button() {
-
+static void handleLongPress() {
+  Serial.println("Button Long Press");
+  WiFi.disconnect();
+  initAP();
 }
